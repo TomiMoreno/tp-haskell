@@ -83,13 +83,27 @@ publicacionesQueLeGustanA (usuarios, relaciones, (author, texto, likes):publicac
 lesGustanLasMismasPublicaciones :: RedSocial -> Usuario -> Usuario -> Bool
 lesGustanLasMismasPublicaciones red user1 user2 = mismosElementos (publicacionesQueLeGustanA red user1) (publicacionesQueLeGustanA red user2)
 
--- describir qué hace la función: .....
+-- Verifica si existe un usuario que le gusten todas las publicaciones de otro
 tieneUnSeguidorFiel :: RedSocial -> Usuario -> Bool
-tieneUnSeguidorFiel = undefined
+tieneUnSeguidorFiel ([], _, _) _ = False
+tieneUnSeguidorFiel red user | contiene (publicacionesDe red user) (publicacionesQueLeGustanA red usuarioActual) == True = True
+                             | otherwise = tieneUnSeguidorFiel siguienteRed user
+                             where 
+                              usuarioActual = head (usuarios red)
+                              siguienteRed = (tail (usuarios red), relaciones red, publicaciones red)
 
 -- describir qué hace la función: .....
 existeSecuenciaDeAmigos :: RedSocial -> Usuario -> Usuario -> Bool
-existeSecuenciaDeAmigos = undefined
+existeSecuenciaDeAmigos red user1 user2 = recorridoDeAmigos red (amigosDe red user1) user2 []
+
+recorridoDeAmigos :: RedSocial -> [Usuario] -> Usuario -> [Usuario] -> Bool
+recorridoDeAmigos _ [] _ _ = False
+recorridoDeAmigos red (user:usuarios) user2 usuariosVisitados | pertenece user2 amigosActuales = True
+                                                              | otherwise = recorridoDeAmigos red siguientesAmigos user2 (user:usuariosVisitados)
+                                                              where 
+                                                                amigosActuales = amigosDe red user
+                                                                siguientesAmigos = sacarTodos usuariosVisitados (usuarios ++ amigosActuales)
+
 
 -- Funciones auxiliares
 
@@ -105,11 +119,31 @@ mismosElementos [] l2 = False
 mismosElementos l1 [] = False
 mismosElementos (x:xs) l2 = pertenece x l2 && mismosElementos xs (sacarUnaVez x l2)
 
+-- Verifica si la primer lista está contenida en la segunda
+contiene :: (Eq t) => [t] -> [t] -> Bool
+contiene [] [] = True
+contiene [] l2 = True
+contiene l1 [] = False
+contiene (x:xs) l2 = pertenece x l2 && contiene xs l2
+
 -- Remueve la primera ocurrencia del elemento dado
 sacarUnaVez :: (Eq t) => t -> [t] -> [t]
 sacarUnaVez e [] = []
 sacarUnaVez e (x:xs) | e == x = xs
                      | otherwise = x : sacarUnaVez e xs
+
+-- Remueve los elementos repetidos de una lista
+quitarRepetidos :: (Eq t) => [t] -> [t]
+quitarRepetidos [] = []
+quitarRepetidos (x:xs) | pertenece x xs = quitarRepetidos xs
+                       | otherwise = x : quitarRepetidos xs
+
+-- Remueve todos los elementos de la primer lista que estén en la segunda
+sacarTodos :: (Eq t) => [t] -> [t] -> [t]
+sacarTodos [] l2 = []
+sacarTodos l1 [] = l1
+sacarTodos (x:xs) l2 | pertenece x l2 = sacarTodos xs l2
+                     | otherwise = x : sacarTodos xs l2
 
 -- Retorna la longitud de una lista
 longitud :: [t] -> Int

@@ -25,10 +25,10 @@ publicaciones :: RedSocial -> [Publicacion]
 publicaciones (_, _, ps) = ps
 
 idDeUsuario :: Usuario -> Integer
-idDeUsuario (id, _) = id 
+idDeUsuario (id, _) = id
 
 nombreDeUsuario :: Usuario -> String
-nombreDeUsuario (_, nombre) = nombre 
+nombreDeUsuario (_, nombre) = nombre
 
 usuarioDePublicacion :: Publicacion -> Usuario
 usuarioDePublicacion (u, _, _) = u
@@ -70,14 +70,17 @@ estaRobertoCarlos (user: usuarios, relaciones, publicaciones) | cantidadDeAmigos
 -- Retorna las publicaciones de un usuario
 publicacionesDe :: RedSocial -> Usuario -> [Publicacion]
 publicacionesDe (_, _, []) _ = []
-publicacionesDe (usuarios, relaciones, publicacion:publicaciones) user | sonElMismoUsuario user (usuarioDePublicacion publicacion) = publicacion : publicacionesDe (usuarios, relaciones, publicaciones) user
-                                                                       | otherwise = publicacionesDe (usuarios, relaciones, publicaciones) user
+publicacionesDe (usuarios, relaciones, publicacion:publicaciones) user | user == (usuarioDePublicacion publicacion) = publicacion : siguientesPublicaciones
+                                                                       | otherwise = siguientesPublicaciones 
+                                                                       where siguientesPublicaciones = publicacionesDe (usuarios, relaciones, publicaciones) user
 
 -- Retorna las publicaciones que le gustan a un usuario
 publicacionesQueLeGustanA :: RedSocial -> Usuario -> [Publicacion]
 publicacionesQueLeGustanA (_, _, []) _ = []
-publicacionesQueLeGustanA (usuarios, relaciones, (author, texto, likes):publicaciones) user | pertenece user likes = (author, texto, likes) : publicacionesQueLeGustanA (usuarios, relaciones, publicaciones) user
-                                                                                            | otherwise = publicacionesQueLeGustanA (usuarios, relaciones, publicaciones) user
+publicacionesQueLeGustanA (usuarios, relaciones, (author, texto, likes):publicaciones) user | pertenece user likes = (author, texto, likes) : siguientesPubs
+                                                                                            | otherwise = siguientesPubs
+                                                                                            where siguientesPubs = publicacionesQueLeGustanA (usuarios, relaciones, publicaciones) user
+
 
 -- Retorna si a dos usuarios les gustan las mismas publicaciones
 lesGustanLasMismasPublicaciones :: RedSocial -> Usuario -> Usuario -> Bool
@@ -86,23 +89,24 @@ lesGustanLasMismasPublicaciones red user1 user2 = mismosElementos (publicaciones
 -- Verifica si existe un usuario que le gusten todas las publicaciones de otro
 tieneUnSeguidorFiel :: RedSocial -> Usuario -> Bool
 tieneUnSeguidorFiel ([], _, _) _ = False
-tieneUnSeguidorFiel red user | contiene (publicacionesDe red user) (publicacionesQueLeGustanA red usuarioActual) == True = True
+tieneUnSeguidorFiel red user | contiene (publicacionesDe red user) (publicacionesQueLeGustanA red usuarioActual) = True
                              | otherwise = tieneUnSeguidorFiel siguienteRed user
-                             where 
+                             where
                               usuarioActual = head (usuarios red)
                               siguienteRed = (tail (usuarios red), relaciones red, publicaciones red)
 
--- describir qué hace la función: .....
+-- Verifica si existe una secuencia de amigos entre 2 usuarios
 existeSecuenciaDeAmigos :: RedSocial -> Usuario -> Usuario -> Bool
-existeSecuenciaDeAmigos red user1 user2 = recorridoDeAmigos red (amigosDe red user1) user2 []
+existeSecuenciaDeAmigos red usuarioInicio usuarioObjetivo = existeSecuenciaDeAmigosAux red [usuarioInicio] usuarioObjetivo []
 
-recorridoDeAmigos :: RedSocial -> [Usuario] -> Usuario -> [Usuario] -> Bool
-recorridoDeAmigos _ [] _ _ = False
-recorridoDeAmigos red (user:usuarios) user2 usuariosVisitados | pertenece user2 amigosActuales = True
-                                                              | otherwise = recorridoDeAmigos red siguientesAmigos user2 (user:usuariosVisitados)
-                                                              where 
-                                                                amigosActuales = amigosDe red user
-                                                                siguientesAmigos = sacarTodos usuariosVisitados (usuarios ++ amigosActuales)
+-- Verifica si 
+existeSecuenciaDeAmigosAux :: RedSocial -> [Usuario] -> Usuario -> [Usuario] -> Bool
+existeSecuenciaDeAmigosAux _ [] _ _ = False
+existeSecuenciaDeAmigosAux red (user:usuarios) usuarioObjetivo usuariosVisitados | pertenece usuarioObjetivo amigosActuales = True
+                                                                                 | otherwise = existeSecuenciaDeAmigosAux red siguientesAmigos usuarioObjetivo (user:usuariosVisitados)
+                                                                                  where
+                                                                                    amigosActuales = user : amigosDe red user
+                                                                                    siguientesAmigos = sacarTodos (usuarios ++ amigosActuales) usuariosVisitados
 
 
 -- Funciones auxiliares
@@ -110,7 +114,7 @@ recorridoDeAmigos red (user:usuarios) user2 usuariosVisitados | pertenece user2 
 -- Verifica si un elemento pertenece a una lista
 pertenece :: (Eq t) => t -> [t] -> Bool
 pertenece e [] = False
-pertenece e (x:xs) = e == x || pertenece e xs 
+pertenece e (x:xs) = e == x || pertenece e xs
 
 -- Verifica si dos listas tienen los mismos elementos, sin importar el orden
 mismosElementos :: (Eq t) => [t] -> [t] -> Bool
